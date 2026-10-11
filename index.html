@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Deepfake Detector</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+    pre { background: #f4f4f4; padding: 12px; white-space: pre-wrap; }
+    button { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Deepfake Detector</h2>
+  <input type="file" id="video" accept="video/*">
+  <br>
+  <button id="go">Analyze</button>
+  <pre id="result"></pre>
+
+  <script>
+    const API_URL = "http://localhost:8000/predict";   // change to your server
+    const MAX_MB = 100;
+
+    document.getElementById("go").onclick = async () => {
+      const out = document.getElementById("result");
+      const file = document.getElementById("video").files[0];
+      if (!file) { out.textContent = "Choose a video first."; return; }
+      if (file.size > MAX_MB * 1024 * 1024) { out.textContent = `File larger than ${MAX_MB} MB.`; return; }
+
+      out.textContent = "Analyzing... this can take a while.";
+      const form = new FormData();
+      form.append("file", file);
+
+      try {
+        const res = await fetch(API_URL, { method: "POST", body: form });
+        let data = {};
+        try { data = await res.json(); } catch (_) {}
+
+        if (!res.ok) {
+          out.textContent = "Error: " + (data.detail || res.statusText);
+          return;
+        }
+        out.textContent =
+          `Label: ${data.label}\n` +
+          `Fake probability: ${(data.fake_probability * 100).toFixed(1)}%\n\n` +
+          data.note;
+      } catch (e) {
+        out.textContent = "Could not reach the server.";
+      }
+    };
+  </script>
+</body>
+</html>
